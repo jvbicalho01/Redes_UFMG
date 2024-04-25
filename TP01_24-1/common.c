@@ -10,6 +10,7 @@ void logexit(const char* msg) {
   exit(EXIT_FAILURE);
 }
 
+// TODO: receber o protocolo no segundo argumento
 int addrparse(const char* addrstr,
               const char* portstr,
               struct sockaddr_storage* storage) {
@@ -23,6 +24,7 @@ int addrparse(const char* addrstr,
   }
   port = htons(port);  // host to network short
 
+  // TODO: colocar dentro de um if "ipv4"
   struct in_addr inaddr4;  // 32-bits IP address
   if (inet_pton(AF_INET, addrstr, &inaddr4)) {
     struct sockaddr_in* addr4 = (struct sockaddr_in*)storage;
@@ -32,6 +34,7 @@ int addrparse(const char* addrstr,
     return 0;
   }
 
+  // TODO: colocar dentro de um if "ipv6"
   struct in6_addr inaddr6;  // 128-bits IPv6 address
   if (inet_pton(AF_INET6, addrstr, &inaddr6)) {
     struct sockaddr_in6* addr6 = (struct sockaddr_in6*)storage;
@@ -88,13 +91,16 @@ int server_sockaddr_init(const char* proto,
 
   memset(storage, 0, sizeof(*storage));
 
+  // TODO mudar para 'ipv4'
   if (0 == strcmp(proto, "v4")) {
     struct sockaddr_in* addr4 = (struct sockaddr_in*)storage;
     addr4->sin_family = AF_INET;
     addr4->sin_addr.s_addr = INADDR_ANY;
     addr4->sin_port = port;
     return 0;
-  } else if (0 == strcmp(proto, "v6")) {
+  }
+  // TODO mudar para 'ipv6' 
+  else if (0 == strcmp(proto, "v6")) {
     struct sockaddr_in6* addr6 = (struct sockaddr_in6*)storage;
     addr6->sin6_family = AF_INET6;
     addr6->sin6_addr = in6addr_any;

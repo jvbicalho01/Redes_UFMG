@@ -11,6 +11,15 @@
 
 #define BUFSZ 1024
 
+// struct para guardar as coordenadas do motorista
+typedef struct {
+  double latitude;
+  double longitude;
+} Coordinate;
+
+// Inicializando as coordenadas do motorista
+Coordinate coordServ = {-19.9227, -43.9451};
+
 // send
 // 1° parametro: socket
 // 2° parametro: dado, onde está armazenado
@@ -46,7 +55,7 @@ int main(int argc, char** argv) {
   }
 
   int enable = 1;
-  if (0 != setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+  if (0 != setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int))) {
     logexit("setsockopt");
   }
 
@@ -63,34 +72,107 @@ int main(int argc, char** argv) {
   char addrstr[BUFSZ];
   addrtostr(addr, addrstr, BUFSZ);
 
-  printf("bound to %s, waiting connections\n", addrstr);
+  struct sockaddr_storage cstorage;
+  struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
+  socklen_t caddrlen = sizeof(cstorage);
+
+  printf("Aguardando solicitação\n");
+
+  // Espera uma conexão do cliente
+  int csock = accept(s, caddr, &caddrlen);
+  if (csock == -1) {
+    logexit("accept");
+  }
+
+  char caddrstr[BUFSZ];
+  addrtostr(caddr, caddrstr, BUFSZ);
+  printf("client connected\n");
+
+  int clientConnected = 0;
 
   while (1) {
-    struct sockaddr_storage cstorage;
-    struct sockadr* caddr = (struct sockaddr*)(&cstorage);
-    socklen_t caddrlen = sizeof(cstorage);
+    if (clientConnected == 1) {
+      printf("Aguardando solicitação\n");
+      csock = accept(s, caddr, &caddrlen);
+      if (csock == -1) {
+        logexit("accept");
+      }
 
-    int csock = accept(s, caddr, &caddrlen);
-    if (csock == -1) {
-      logexit("accept");
+      char caddrstr[BUFSZ];
+      addrtostr(caddr, caddrstr, BUFSZ);
+      printf("client connected\n");
+
+      clientConnected = 0;
     }
 
-    char caddrstr[BUFSZ];
-    addrtostr(caddr, caddrstr, BUFSZ);
-    printf("[log] connection from %s\n", caddrstr);
+    if(clientConnected == 2){
+      printf("Aguardando solicitação\n");
+
+      clientConnected = 0;
+    }
 
     char buf[BUFSZ];
     memset(buf, 0, BUFSZ);
-    size_t count = recv(csock, buf, BUFSZ - 1, 0);
-    printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
 
-    sprintf(buf, "remote endpoint %.1000s\n", caddrstr);
-    count = send(csock, buf, strlen(buf) + 1, 0);
-    if (count != strlen(buf) + 1) {
-      logexit("send");
+    // recebe do cliente se solicitou ou não pediu uma corrida
+    size_t count = recv(csock, buf, BUFSZ - 1, 0);
+
+    // verifica o caso onde o cliente não pediu a corrida
+    if (strncmp(buf, "0", 1) == 0) {
+      // printf("Saiu\n");
+      sprintf(buf, "Conexao encerrada\n");
+      size_t countSend = send(csock, buf, strlen(buf) + 1, 0);
+
+      if (countSend != strlen(buf) + 1) {
+        printf("LOGEXIT SERVER SEND");
+        logexit("send");
+      }
+      printf("client disconnected\n");
+      clientConnected = 1;
+
+      // fecha a conexao com o cliente
+      // close(csock);
+      // close(s);
     }
-    close(csock);
+
+    // verifica o caso onde o cliente solicitou a corrida
+    else if (strncmp(buf, "1", 1) == 0) {
+      printf("Corrida disponível:\n");
+      printf("0 - Recusar\n");
+      printf("1 - Aceitar\n");
+      fgets(buf, BUFSZ - 1, stdin);
+      // envia se o motorista aceitou ou não a corrida
+      size_t countSend = send(csock, buf, strlen(buf) + 1, 0);
+      if (countSend != strlen(buf) + 1) {
+        logexit("send");
+      }
+      // trata caso o motorista tenha recusado
+      if (strncmp(buf, "0", 1) == 0) {
+        printf("client disconnected\n");
+        printf("corrida recusada\n");
+        // clientConnected = 1;
+        clientConnected = 2;
+
+      }
+      // trata caso o motorista tenha aceitado
+      else if (strncmp(buf, "1", 1) == 0) {
+        printf("client disconnected\n");
+        printf("corrida aceita\n");
+        clientConnected = 1;
+      }
+      // printf("client disconnected\n");
+      // clientConnected = 1;
+
+      // // fecha a conexao com o cliente
+      // close(csock);
+    }
+
+    // close(csock);
   }
 
-  exit(EXIT_SUCCESS);
+  close(csock);
+  // Fechar o socket do servidor
+  close(s);
+
+  return 0;
 }
