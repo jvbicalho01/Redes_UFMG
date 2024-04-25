@@ -35,8 +35,14 @@ typedef struct {
   double longitude;
 } Coordinate;
 
+// struct Coordinate {
+//   double latitude;
+//   double longitude;
+// };
+
 // Inicializando as coordenadas do cliente
-Coordinate coordServ = {-19.8657, -43.9874};
+Coordinate coordCli = {-19.8657, -43.9874};
+// struct Coordinate coordCli = {-19.8657, -43.9874};
 
 int main(int argc, char** argv) {
   if (argc < 3) {
@@ -68,6 +74,10 @@ int main(int argc, char** argv) {
   unsigned total = 0;
 
   int clientConnected = 0;
+
+  // printf("COORDENADAS CLIENTE:\n");
+  // printf("Longitude: %.4f; Latitude: %.4f\n", coordCli.longitude,
+  // coordCli.latitude);
 
   while (1) {
     char buf[BUFSZ];
@@ -101,19 +111,17 @@ int main(int argc, char** argv) {
       memset(buf, 0, BUFSZ);  // clears buffer
 
       // recebe do servidor a "confirmação" de cancelamento
-      size_t countRecv = recv(s, buf + total, BUFSZ - total, 0);
+      size_t countRecv = recv(s, buf, BUFSZ, 0);
       close(s);
       break;
     }
 
     // trata o caso onde o cliente solicita a corrida
     else if (strncmp(buf, "1", 1) == 0) {
-
-
       memset(buf, 0, BUFSZ);
 
       // recebe se o motorista aceitou ou recusou a corrida
-      count = recv(s, buf + total, BUFSZ - total, 0);
+      count = recv(s, buf, BUFSZ, 0);
 
       // trata caso o motorista tenha recusado
       if (strncmp(buf, "0", 1) == 0) {
@@ -126,6 +134,11 @@ int main(int argc, char** argv) {
       // trata caso o motorista tenha aceitado
       else if (strncmp(buf, "1", 1) == 0) {
         printf("Aceitou a corrida\n");
+        // envia as coordenadas para o server
+        size_t countSend = send(s, &coordCli, sizeof(Coordinate), 0);
+
+        // recebe a confirmação do servidor
+        size_t countRecv = recv(s, buf, BUFSZ, 0);
         close(s);
         break;
       }

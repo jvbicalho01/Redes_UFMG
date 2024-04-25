@@ -17,8 +17,14 @@ typedef struct {
   double longitude;
 } Coordinate;
 
+// struct Coordinate {
+//   double latitude;
+//   double longitude;
+// };
+
 // Inicializando as coordenadas do motorista
 Coordinate coordServ = {-19.9227, -43.9451};
+// struct Coordinate coordServ = {-19.9227, -43.9451};
 
 // send
 // 1° parametro: socket
@@ -33,8 +39,8 @@ Coordinate coordServ = {-19.9227, -43.9451};
 // 4° parametro:
 
 void usage(int argc, char** argv) {
-  printf("usage: %s <v4|v6> <server port>\n", argv[0]);
-  printf("exemple: %s v4 51511\n", argv[0]);
+  printf("usage: %s <ipv4|ipv6> <server port>\n", argv[0]);
+  printf("exemple: %s ipv4 51511\n", argv[0]);
   exit(EXIT_FAILURE);
 }
 
@@ -76,6 +82,10 @@ int main(int argc, char** argv) {
   struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
   socklen_t caddrlen = sizeof(cstorage);
 
+  // printf("COORDENADAS SERVIDOR:\n");
+  // printf("Longitude: %.4f; Latitude: %.4f\n", coordServ.longitude,
+  // coordServ.latitude);
+
   printf("Aguardando solicitação\n");
 
   // Espera uma conexão do cliente
@@ -105,7 +115,7 @@ int main(int argc, char** argv) {
       clientConnected = 0;
     }
 
-    if(clientConnected == 2){
+    if (clientConnected == 2) {
       printf("Aguardando solicitação\n");
 
       clientConnected = 0;
@@ -113,6 +123,8 @@ int main(int argc, char** argv) {
 
     char buf[BUFSZ];
     memset(buf, 0, BUFSZ);
+
+    Coordinate coordRecv;
 
     // recebe do cliente se solicitou ou não pediu uma corrida
     size_t count = recv(csock, buf, BUFSZ - 1, 0);
@@ -156,8 +168,17 @@ int main(int argc, char** argv) {
       }
       // trata caso o motorista tenha aceitado
       else if (strncmp(buf, "1", 1) == 0) {
-        printf("client disconnected\n");
+        // printf("client disconnected\n");
         printf("corrida aceita\n");
+        // recebe as coordenadas do cliente
+        size_t countRecv = recv(csock, &coordRecv, sizeof(Coordinate), 0);
+        printf("COORDENADAS DO CLIENTE RECEBIDAS:\n");
+        printf("Latitude: %.4f; Longitude: %.4f\n", coordRecv.latitude,
+               coordRecv.longitude);
+
+        sprintf(buf, "Coordenadas recebidas\n");
+        // envia a confirmação para o cliente que o servidor recebeu as coordenadas
+        size_t countSend = send(csock, buf, strlen(buf), 0);
         clientConnected = 1;
       }
       // printf("client disconnected\n");
