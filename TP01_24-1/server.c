@@ -1,15 +1,37 @@
 #include "common.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+// #include <cmath>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
 #define BUFSZ 1024
+
+#define M_PI 3.14159265358979323846
+
+double haversine(double lat1, double long1, double lat2, double long2) {
+  // distance between latitudes
+  // and longitudes
+  double dLat = (lat2 - lat1) * M_PI / 180.0;
+  double dLong = (long2 - long1) * M_PI / 180.0;
+
+  // convert to radians
+  lat1 = (lat1)*M_PI / 180.0;
+  lat2 = (lat2)*M_PI / 180.0;
+
+  // apply formulae
+  double a =
+      pow(sin(dLat / 2), 2) + pow(sin(dLong / 2), 2) * cos(lat1) * cos(lat2);
+  double rad = 6371;
+  double c = 2 * asin(sqrt(a));
+  return rad * c;
+}
 
 // struct para guardar as coordenadas do motorista
 typedef struct {
@@ -172,12 +194,18 @@ int main(int argc, char** argv) {
         printf("corrida aceita\n");
         // recebe as coordenadas do cliente
         size_t countRecv = recv(csock, &coordRecv, sizeof(Coordinate), 0);
+
+        double distance = haversine(coordRecv.latitude, coordRecv.longitude,
+                                    coordServ.latitude, coordServ.longitude);
         printf("COORDENADAS DO CLIENTE RECEBIDAS:\n");
         printf("Latitude: %.4f; Longitude: %.4f\n", coordRecv.latitude,
                coordRecv.longitude);
+        printf("Distancia: %f KM\n", distance);
+        printf("Distancia arredondada: %f KM\n", round(distance));
 
         sprintf(buf, "Coordenadas recebidas\n");
-        // envia a confirmação para o cliente que o servidor recebeu as coordenadas
+        // envia a confirmação para o cliente que o servidor recebeu as
+        // coordenadas
         size_t countSend = send(csock, buf, strlen(buf), 0);
         clientConnected = 1;
       }
