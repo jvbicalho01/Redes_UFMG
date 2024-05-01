@@ -75,10 +75,6 @@ int main(int argc, char** argv) {
 
   int clientConnected = 0;
 
-  // printf("COORDENADAS CLIENTE:\n");
-  // printf("Longitude: %.4f; Latitude: %.4f\n", coordCli.longitude,
-  // coordCli.latitude);
-
   while (1) {
     char buf[BUFSZ];
     memset(buf, 0, BUFSZ);
@@ -99,7 +95,7 @@ int main(int argc, char** argv) {
     // envia se o cliente pediu ou não a corrida
     size_t countSend = send(s, buf, strlen(buf), 0);
 
-    if (countSend != strlen(buf)) {
+    if (countSend < 0) {
       printf("LOGEXIT SERVER SEND");
       logexit("send");
     }
@@ -108,10 +104,6 @@ int main(int argc, char** argv) {
     if (strncmp(buf, "0", 1) == 0) {
       printf("Saiu da corrida\n");
 
-      memset(buf, 0, BUFSZ);  // clears buffer
-
-      // recebe do servidor a "confirmação" de cancelamento
-      size_t countRecv = recv(s, buf, BUFSZ, 0);
       close(s);
       break;
     }
@@ -121,24 +113,39 @@ int main(int argc, char** argv) {
       memset(buf, 0, BUFSZ);
 
       // recebe se o motorista aceitou ou recusou a corrida
-      count = recv(s, buf, BUFSZ, 0);
+      size_t countRecv = recv(s, buf, BUFSZ, 0);
+
+      if (countRecv < 0) {
+        // printf("LOGEXIT SERVER SEND");
+        logexit("recv");
+      }
 
       // trata caso o motorista tenha recusado
       if (strncmp(buf, "0", 1) == 0) {
         printf("Não foi encontrado um motorista\n");
-        // close(s);
-
-        // break;
-        // clientConnected = 1;
       }
       // trata caso o motorista tenha aceitado
       else if (strncmp(buf, "1", 1) == 0) {
-        printf("Aceitou a corrida\n");
         // envia as coordenadas para o server
         size_t countSend = send(s, &coordCli, sizeof(Coordinate), 0);
 
-        // recebe a confirmação do servidor
-        size_t countRecv = recv(s, buf, BUFSZ, 0);
+        if (countSend < 0) {
+          printf("LOGEXIT SERVER SEND");
+          logexit("send");
+        }
+
+        memset(buf, 0, BUFSZ);
+        double recvDistance;
+         while (recv(s, &recvDistance, sizeof(double), 0) > 0) {
+          printf("Motorista a %.0fm\n", recvDistance);
+          if (recvDistance - 400 < 0){
+            sleep(2);
+            printf("O motorista chegou!\n");
+            close(s);
+            break;
+          }
+        }
+
         close(s);
         break;
       }

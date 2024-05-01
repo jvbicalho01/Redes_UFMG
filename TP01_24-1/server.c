@@ -30,7 +30,7 @@ double haversine(double lat1, double long1, double lat2, double long2) {
       pow(sin(dLat / 2), 2) + pow(sin(dLong / 2), 2) * cos(lat1) * cos(lat2);
   double rad = 6371;
   double c = 2 * asin(sqrt(a));
-  return rad * c;
+  return rad * c * 1000;
 }
 
 // struct para guardar as coordenadas do motorista
@@ -104,10 +104,6 @@ int main(int argc, char** argv) {
   struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
   socklen_t caddrlen = sizeof(cstorage);
 
-  // printf("COORDENADAS SERVIDOR:\n");
-  // printf("Longitude: %.4f; Latitude: %.4f\n", coordServ.longitude,
-  // coordServ.latitude);
-
   printf("Aguardando solicitação\n");
 
   // Espera uma conexão do cliente
@@ -118,7 +114,7 @@ int main(int argc, char** argv) {
 
   char caddrstr[BUFSZ];
   addrtostr(caddr, caddrstr, BUFSZ);
-  printf("client connected\n");
+  // printf("client connected\n");
 
   int clientConnected = 0;
 
@@ -132,7 +128,7 @@ int main(int argc, char** argv) {
 
       char caddrstr[BUFSZ];
       addrtostr(caddr, caddrstr, BUFSZ);
-      printf("client connected\n");
+      // printf("client connected\n");
 
       clientConnected = 0;
     }
@@ -149,24 +145,16 @@ int main(int argc, char** argv) {
     Coordinate coordRecv;
 
     // recebe do cliente se solicitou ou não pediu uma corrida
-    size_t count = recv(csock, buf, BUFSZ - 1, 0);
+    size_t countRecv = recv(csock, buf, BUFSZ - 1, 0);
+
+    if (countRecv < 0) {
+      // printf("LOGEXIT SERVER SEND");
+      logexit("recv");
+    }
 
     // verifica o caso onde o cliente não pediu a corrida
     if (strncmp(buf, "0", 1) == 0) {
-      // printf("Saiu\n");
-      sprintf(buf, "Conexao encerrada\n");
-      size_t countSend = send(csock, buf, strlen(buf) + 1, 0);
-
-      if (countSend != strlen(buf) + 1) {
-        printf("LOGEXIT SERVER SEND");
-        logexit("send");
-      }
-      printf("client disconnected\n");
       clientConnected = 1;
-
-      // fecha a conexao com o cliente
-      // close(csock);
-      // close(s);
     }
 
     // verifica o caso onde o cliente solicitou a corrida
@@ -177,48 +165,47 @@ int main(int argc, char** argv) {
       fgets(buf, BUFSZ - 1, stdin);
       // envia se o motorista aceitou ou não a corrida
       size_t countSend = send(csock, buf, strlen(buf) + 1, 0);
-      if (countSend != strlen(buf) + 1) {
+      if (countSend < 0) {
         logexit("send");
       }
       // trata caso o motorista tenha recusado
       if (strncmp(buf, "0", 1) == 0) {
-        printf("client disconnected\n");
-        printf("corrida recusada\n");
-        // clientConnected = 1;
         clientConnected = 2;
-
       }
       // trata caso o motorista tenha aceitado
       else if (strncmp(buf, "1", 1) == 0) {
-        // printf("client disconnected\n");
-        printf("corrida aceita\n");
         // recebe as coordenadas do cliente
         size_t countRecv = recv(csock, &coordRecv, sizeof(Coordinate), 0);
 
+        if (countRecv < 0) {
+          // printf("LOGEXIT SERVER SEND");
+          logexit("recv");
+        }
+
         double distance = haversine(coordRecv.latitude, coordRecv.longitude,
                                     coordServ.latitude, coordServ.longitude);
-        printf("COORDENADAS DO CLIENTE RECEBIDAS:\n");
-        printf("Latitude: %.4f; Longitude: %.4f\n", coordRecv.latitude,
-               coordRecv.longitude);
-        printf("Distancia: %f KM\n", distance);
-        printf("Distancia arredondada: %f KM\n", round(distance));
 
-        sprintf(buf, "Coordenadas recebidas\n");
-        // envia a confirmação para o cliente que o servidor recebeu as
-        // coordenadas
-        size_t countSend = send(csock, buf, strlen(buf), 0);
+        // envia a distancia para o cliente a cada 2 segundos e reduz em 400m
+        // após cada envio
+        while (distance > 0) {
+          memset(buf, 0, BUFSZ);
+          size_t countSend = send(csock, &distance, sizeof(double), 0);
+          if (countSend < 0) {
+            printf("LOGEXIT SERVER SEND");
+            logexit("send");
+          }
+          distance -= 400;
+          sleep(2);
+          memset(buf, 0, BUFSZ);
+        }
+        printf("O motorista chegou!\n");
         clientConnected = 1;
       }
-      // printf("client disconnected\n");
-      // clientConnected = 1;
-
-      // // fecha a conexao com o cliente
-      // close(csock);
     }
 
-    // close(csock);
   }
 
+  // fecha a conexão com o cliente
   close(csock);
   // Fechar o socket do servidor
   close(s);
