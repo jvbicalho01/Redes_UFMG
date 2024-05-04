@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
   struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
   socklen_t caddrlen = sizeof(cstorage);
 
-  printf("Aguardando solicitação\n");
+  printf("Aguardando solicitação.\n");
 
   // Espera uma conexão do cliente
   int csock = accept(s, caddr, &caddrlen);
@@ -117,10 +117,27 @@ int main(int argc, char** argv) {
   // printf("client connected\n");
 
   int clientConnected = 0;
+  int clientExitConnection = 0;
 
   while (1) {
     if (clientConnected == 1) {
-      printf("Aguardando solicitação\n");
+      printf("Aguardando solicitação.\n");
+      // espera uma conexão do cliente
+      csock = accept(s, caddr, &caddrlen);
+      if (csock == -1) {
+        logexit("accept");
+      }
+
+      char caddrstr[BUFSZ];
+      addrtostr(caddr, caddrstr, BUFSZ);
+      // printf("client connected\n");
+
+      clientConnected = 0;
+    }
+
+    if (clientExitConnection == 1) {
+      // printf("Aguardando solicitação.\n");
+      // espera uma conexão com o cliente
       csock = accept(s, caddr, &caddrlen);
       if (csock == -1) {
         logexit("accept");
@@ -134,7 +151,7 @@ int main(int argc, char** argv) {
     }
 
     if (clientConnected == 2) {
-      printf("Aguardando solicitação\n");
+      printf("Aguardando solicitação.\n");
 
       clientConnected = 0;
     }
@@ -154,7 +171,8 @@ int main(int argc, char** argv) {
 
     // verifica o caso onde o cliente não pediu a corrida
     if (strncmp(buf, "0", 1) == 0) {
-      clientConnected = 1;
+      // clientConnected = 1;
+      clientExitConnection = 1;
     }
 
     // verifica o caso onde o cliente solicitou a corrida
@@ -162,8 +180,10 @@ int main(int argc, char** argv) {
       printf("Corrida disponível:\n");
       printf("0 - Recusar\n");
       printf("1 - Aceitar\n");
+      // pega da entrada o que o motorista digitou (0 para recusar a corrida e 1
+      // para aceitar a corrida)
       fgets(buf, BUFSZ - 1, stdin);
-      // envia se o motorista aceitou ou não a corrida
+      // envia para o cliente se o motorista aceitou ou não a corrida
       size_t countSend = send(csock, buf, strlen(buf) + 1, 0);
       if (countSend < 0) {
         logexit("send");
@@ -182,6 +202,7 @@ int main(int argc, char** argv) {
           logexit("recv");
         }
 
+        // calcula a distancia entre as coordenadas
         double distance = haversine(coordRecv.latitude, coordRecv.longitude,
                                     coordServ.latitude, coordServ.longitude);
 
@@ -202,7 +223,6 @@ int main(int argc, char** argv) {
         clientConnected = 1;
       }
     }
-
   }
 
   // fecha a conexão com o cliente

@@ -50,7 +50,6 @@ int main(int argc, char** argv) {
   }
 
   struct sockaddr_storage storage;
-  // TODO: passar argv[2] e argv[3]
   if (0 != addrparse(argv[2], argv[3], &storage)) {
     usage(argc, argv);
   }
@@ -70,9 +69,6 @@ int main(int argc, char** argv) {
   char addrstr[BUFSZ];
   addrtostr(addr, addrstr, BUFSZ);
 
-  size_t count;
-  unsigned total = 0;
-
   int clientConnected = 0;
 
   while (1) {
@@ -86,13 +82,15 @@ int main(int argc, char** argv) {
       printf("1 - Solicitar corrida\n");
       clientConnected = 0;
     }
+    // pega da entrada o que o cliente digitou (0 para sair e 1 para solicitar
+    // corrida)
     fgets(buf, BUFSZ - 1, stdin);
 
     // if (fgets(buf, BUFSZ - 1, stdin) == NULL) {
     //   break;
     // }
 
-    // envia se o cliente pediu ou não a corrida
+    // envia para o servidor se o cliente pediu ou não a corrida
     size_t countSend = send(s, buf, strlen(buf), 0);
 
     if (countSend < 0) {
@@ -102,7 +100,7 @@ int main(int argc, char** argv) {
 
     // trata o caso onde o cliente não solicita a corrida
     if (strncmp(buf, "0", 1) == 0) {
-      printf("Saiu da corrida\n");
+      // printf("Saiu da corrida\n");
 
       close(s);
       break;
@@ -112,7 +110,7 @@ int main(int argc, char** argv) {
     else if (strncmp(buf, "1", 1) == 0) {
       memset(buf, 0, BUFSZ);
 
-      // recebe se o motorista aceitou ou recusou a corrida
+      // recebe do servidor se o motorista aceitou ou recusou a corrida
       size_t countRecv = recv(s, buf, BUFSZ, 0);
 
       if (countRecv < 0) {
@@ -126,7 +124,7 @@ int main(int argc, char** argv) {
       }
       // trata caso o motorista tenha aceitado
       else if (strncmp(buf, "1", 1) == 0) {
-        // envia as coordenadas para o server
+        // envia as coordenadas para o servidor
         size_t countSend = send(s, &coordCli, sizeof(Coordinate), 0);
 
         if (countSend < 0) {
@@ -136,9 +134,11 @@ int main(int argc, char** argv) {
 
         memset(buf, 0, BUFSZ);
         double recvDistance;
-         while (recv(s, &recvDistance, sizeof(double), 0) > 0) {
+        // recebe do servidor a distancia do motorista a cada 2 segundos (após
+        // um recv a distancia é diminuida em 400m)
+        while (recv(s, &recvDistance, sizeof(double), 0) > 0) {
           printf("Motorista a %.0fm\n", recvDistance);
-          if (recvDistance - 400 < 0){
+          if (recvDistance - 400 < 0) {
             sleep(2);
             printf("O motorista chegou!\n");
             close(s);
