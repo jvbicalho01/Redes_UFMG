@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     }
     // pega da entrada o que o cliente digitou (0 para sair e 1 para solicitar
     // corrida)
-    fgets(buf, BUFSZ - 1, stdin);
+    fgets(buf, BUFSZ, stdin);
 
     // if (fgets(buf, BUFSZ - 1, stdin) == NULL) {
     //   break;

@@ -135,6 +135,12 @@ int main(int argc, char** argv) {
       clientConnected = 0;
     }
 
+    if (clientConnected == 2) {
+      printf("Aguardando solicitação.\n");
+
+      clientConnected = 0;
+    }
+
     if (clientExitConnection == 1) {
       // printf("Aguardando solicitação.\n");
       // espera uma conexão com o cliente
@@ -147,13 +153,7 @@ int main(int argc, char** argv) {
       addrtostr(caddr, caddrstr, BUFSZ);
       // printf("client connected\n");
 
-      clientConnected = 0;
-    }
-
-    if (clientConnected == 2) {
-      printf("Aguardando solicitação.\n");
-
-      clientConnected = 0;
+      clientExitConnection = 0;
     }
 
     char buf[BUFSZ];
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
     Coordinate coordRecv;
 
     // recebe do cliente se solicitou ou não pediu uma corrida
-    size_t countRecv = recv(csock, buf, BUFSZ - 1, 0);
+    size_t countRecv = recv(csock, buf, BUFSZ, 0);
 
     if (countRecv < 0) {
       // printf("LOGEXIT SERVER SEND");
@@ -182,9 +182,9 @@ int main(int argc, char** argv) {
       printf("1 - Aceitar\n");
       // pega da entrada o que o motorista digitou (0 para recusar a corrida e 1
       // para aceitar a corrida)
-      fgets(buf, BUFSZ - 1, stdin);
+      fgets(buf, BUFSZ, stdin);
       // envia para o cliente se o motorista aceitou ou não a corrida
-      size_t countSend = send(csock, buf, strlen(buf) + 1, 0);
+      size_t countSend = send(csock, buf, strlen(buf), 0);
       if (countSend < 0) {
         logexit("send");
       }
