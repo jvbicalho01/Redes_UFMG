@@ -51,34 +51,54 @@ int main(int argc, char** argv) {
 
     fgets(client_option, BUFSZ, stdin);
 
-    if (strncmp(client_option, "0", 1) == 0 ||
-        strncmp(client_option, "1", 1) == 0 ||
-        strncmp(client_option, "2", 1) == 0 ||
-        strncmp(client_option, "3", 1) == 0) {
-      break;
+    // if (strncmp(client_option, "0", 1) == 0 ||
+    //     strncmp(client_option, "1", 1) == 0 ||
+    //     strncmp(client_option, "2", 1) == 0 ||
+    //     strncmp(client_option, "3", 1) == 0) {
+    //   break;
+    // }
+
+    if (strncmp(client_option, "0", 1) == 0) {
+      close(s);
+      exit(EXIT_SUCCESS);
+      // break;
+    }
+
+    // Envia para o servidor opção escolhida pelo cliente
+    size_t countSend = sendto(s, &client_option, sizeof(client_option), 0,
+                              (struct sockaddr*)&storage, addr_storage_size);
+
+    if (countSend < 0) {
+      logexit("sendto");
+    }
+
+    for (int i = 0; i < 5; i++) {
+      recvfrom(s, response, BUFSZ - 1, 0, NULL, NULL);
+      printf("%s\n", response);
+      memset(response, 0, BUFSZ);
     }
   }
 
-  if (strncmp(client_option, "0", 1) == 0) {
-    close(s);
-    exit(EXIT_SUCCESS);
-  }
+  // if (strncmp(client_option, "0", 1) == 0) {
+  //   close(s);
+  //   exit(EXIT_SUCCESS);
+  // }
 
-  // Envia opção do menu escolhida pelo usuário
-  size_t countSend = sendto(s, &client_option, sizeof(client_option), 0,
-                            (struct sockaddr*)&storage, addr_storage_size);
+  // // Envia para o servidor opção escolhida pelo cliente
+  // size_t countSend = sendto(s, &client_option, sizeof(client_option), 0,
+  //                           (struct sockaddr*)&storage, addr_storage_size);
 
-  if (countSend < 0) {
-    logexit("sendto");
-  }
+  // if (countSend < 0) {
+  //   logexit("sendto");
+  // }
 
-  for (int i = 0; i < 5; i++) {
-    recvfrom(s, response, BUFSZ - 1, 0, NULL, NULL);
-    printf("%s\n", response);
-    memset(response, 0, BUFSZ);
-  }
+  // for (int i = 0; i < 5; i++) {
+  //   recvfrom(s, response, BUFSZ - 1, 0, NULL, NULL);
+  //   printf("%s\n", response);
+  //   memset(response, 0, BUFSZ);
+  // }
 
-  // Fechar o socket do cliente
+  // Fecha o socket do cliente
   close(s);
 
   return 0;
