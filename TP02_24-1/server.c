@@ -41,6 +41,63 @@ char* frases_clubeDaLuta[] = {
     "É apenas depois de perder tudo que somos livres para fazer qualquer coisa",
     "Escolha suas lutas com sabedoria"};
 
+unsigned clients_connecteds = 0;
+
+typedef struct {
+  char client_option[BUFSZ];
+  int s_socket;
+  struct sockaddr_storage storage;
+} client_info;
+
+void* client_handler(void* ptr) {
+  client_info* data = (client_info*)ptr;
+  char response[BUFSZ];
+
+  struct sockaddr* caddr = (struct sockaddr*)&(data->storage);
+  socklen_t caddrlen = sizeof(data->storage);
+
+  if (strncmp(data->client_option, "1", 1) == 0) {
+    for (int i = 0; i < 5; i++) {
+      memset(response, 0, BUFSZ);
+      strcpy(response, frases_senhorDosAneis[i]);
+      sendto(data->s_socket, response, BUFSZ - 1, 0, caddr, caddrlen);
+      sleep(3);
+    }
+
+  } else if (strncmp(data->client_option, "2", 1) == 0) {
+    for (int i = 0; i < 5; i++) {
+      memset(response, 0, BUFSZ);
+      strcpy(response, frases_poderosoChefao[i]);
+      sendto(data->s_socket, response, BUFSZ - 1, 0, caddr, caddrlen);
+      sleep(3);
+    }
+
+  } else if (strncmp(data->client_option, "3", 1) == 0) {
+    for (int i = 0; i < 5; i++) {
+      memset(response, 0, BUFSZ);
+      strcpy(response, frases_clubeDaLuta[i]);
+      sendto(data->s_socket, response, BUFSZ - 1, 0, caddr, caddrlen);
+      sleep(3);
+    }
+  } else {
+    // close(s);
+    logexit("opção inválida!");
+  }
+
+  clients_connecteds--;
+
+  pthread_exit(EXIT_SUCCESS);
+}
+
+void* count_number_connections(void* ptr) {
+  while (1) {
+    printf("Clientes: %u\n", clients_connecteds);
+    sleep(4);
+  }
+
+  pthread_exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char** argv) {
   if (argc < 3) {
     usage(argc, argv);
@@ -72,47 +129,8 @@ int main(int argc, char** argv) {
     logexit("bind");
   }
 
-  // // Endereço IP do cliente
-  // struct sockaddr_storage cstorage;
-  // struct sockaddr* caddr = (struct sockaddr*)(&cstorage);
-  // socklen_t caddrlen = sizeof(cstorage);
-
-  // char client_option[BUFSZ];
-  // char response[BUFSZ];
-
-  // // recebe do cliente a opção escolhida
-  // size_t coutRecv =
-  //     recvfrom(s, &client_option, sizeof(client_option), 0, caddr,
-  //     &caddrlen);
-
-  // if (coutRecv < 0) {
-  //   logexit("recvfrom");
-  // }
-
-  // if (strncmp(client_option, "1", 1) == 0) {
-  //   for (int i = 0; i < 5; i++) {
-  //     memset(response, 0, BUFSZ);
-  //     strcpy(response, frases_senhorDosAneis[i]);
-  //     sendto(s, response, BUFSZ - 1, 0, caddr, caddrlen);
-  //   }
-
-  // } else if (strncmp(client_option, "2", 1) == 0) {
-  //   for (int i = 0; i < 5; i++) {
-  //     memset(response, 0, BUFSZ);
-  //     strcpy(response, frases_poderosoChefao[i]);
-  //     sendto(s, response, BUFSZ - 1, 0, caddr, caddrlen);
-  //   }
-
-  // } else if (strncmp(client_option, "3", 1) == 0) {
-  //   for (int i = 0; i < 5; i++) {
-  //     memset(response, 0, BUFSZ);
-  //     strcpy(response, frases_clubeDaLuta[i]);
-  //     sendto(s, response, BUFSZ - 1, 0, caddr, caddrlen);
-  //   }
-  // } else {
-  //   // close(s);
-  //   logexit("opção inválida!");
-  // }
+  pthread_t counter_clients;
+  pthread_create(&counter_clients, NULL, count_number_connections, NULL);
 
   while (1) {
     // Endereço IP do cliente
@@ -121,7 +139,7 @@ int main(int argc, char** argv) {
     socklen_t caddrlen = sizeof(cstorage);
 
     char client_option[BUFSZ];
-    char response[BUFSZ];
+    // char response[BUFSZ];
 
     // recebe do cliente a opção escolhida
     size_t coutRecv =
@@ -131,31 +149,23 @@ int main(int argc, char** argv) {
       logexit("recvfrom");
     }
 
-    if (strncmp(client_option, "1", 1) == 0) {
-      for (int i = 0; i < 5; i++) {
-        memset(response, 0, BUFSZ);
-        strcpy(response, frases_senhorDosAneis[i]);
-        sendto(s, response, BUFSZ - 1, 0, caddr, caddrlen);
-      }
-
-    } else if (strncmp(client_option, "2", 1) == 0) {
-      for (int i = 0; i < 5; i++) {
-        memset(response, 0, BUFSZ);
-        strcpy(response, frases_poderosoChefao[i]);
-        sendto(s, response, BUFSZ - 1, 0, caddr, caddrlen);
-      }
-
-    } else if (strncmp(client_option, "3", 1) == 0) {
-      for (int i = 0; i < 5; i++) {
-        memset(response, 0, BUFSZ);
-        strcpy(response, frases_clubeDaLuta[i]);
-        sendto(s, response, BUFSZ - 1, 0, caddr, caddrlen);
-      }
-    } else {
-      // close(s);
-      logexit("opção inválida!");
+    client_info* cdata = malloc(sizeof(*cdata));
+    if (cdata == NULL) {
+      logexit("malloc");
     }
+
+    // cdata->client_option = client_option;
+    strcpy(cdata->client_option, client_option);
+    cdata->s_socket = s;
+    memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
+
+    pthread_t tid;
+    pthread_create(&tid, NULL, client_handler, cdata);
+    clients_connecteds++;
+
   }
+
+  pthread_join(counter_clients, NULL);
 
   // fecha o socket do servidor
   close(s);

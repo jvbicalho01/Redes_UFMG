@@ -29,9 +29,7 @@ int main(int argc, char** argv) {
     usage(argc, argv);
   }
 
-  size_t addr_storage_size = storage.ss_family == AF_INET
-                                 ? sizeof(struct sockaddr_in)
-                                 : sizeof(struct sockaddr_in6);
+  socklen_t addr_storage_size = sizeof(struct sockaddr_storage);
 
   // Inicializa soquete do cliente
   int s;
@@ -73,30 +71,15 @@ int main(int argc, char** argv) {
     }
 
     for (int i = 0; i < 5; i++) {
-      recvfrom(s, response, BUFSZ - 1, 0, NULL, NULL);
+      size_t countRecv = recvfrom(s, response, BUFSZ, 0, (struct sockaddr *)&storage, &addr_storage_size);
+      if(countRecv < 0){
+        logexit("recvfrom");
+      }
+      // recvfrom(s, response, BUFSZ - 1, 0, NULL, NULL);
       printf("%s\n", response);
       memset(response, 0, BUFSZ);
     }
   }
-
-  // if (strncmp(client_option, "0", 1) == 0) {
-  //   close(s);
-  //   exit(EXIT_SUCCESS);
-  // }
-
-  // // Envia para o servidor opção escolhida pelo cliente
-  // size_t countSend = sendto(s, &client_option, sizeof(client_option), 0,
-  //                           (struct sockaddr*)&storage, addr_storage_size);
-
-  // if (countSend < 0) {
-  //   logexit("sendto");
-  // }
-
-  // for (int i = 0; i < 5; i++) {
-  //   recvfrom(s, response, BUFSZ - 1, 0, NULL, NULL);
-  //   printf("%s\n", response);
-  //   memset(response, 0, BUFSZ);
-  // }
 
   // Fecha o socket do cliente
   close(s);
