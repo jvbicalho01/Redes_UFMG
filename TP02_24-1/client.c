@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
     printf("2 - O Poderoso Chefão\n");
     printf("3 - Clube da Luta\n");
 
+    // lê do teclado a entrada digitada pelo cliente
     fgets(client_option, BUFSZ, stdin);
 
     // if (strncmp(client_option, "0", 1) == 0 ||
@@ -71,8 +72,11 @@ int main(int argc, char** argv) {
     }
 
     for (int i = 0; i < 5; i++) {
-      size_t countRecv = recvfrom(s, response, BUFSZ, 0, (struct sockaddr *)&storage, &addr_storage_size);
-      if(countRecv < 0){
+      // recebe do servidor a frase do filme escolhido (a cada 3s recebe uma)
+      size_t countRecv =
+          recvfrom(s, response, BUFSZ, 0, (struct sockaddr*)&storage,
+                   &addr_storage_size);
+      if (countRecv < 0) {
         logexit("recvfrom");
       }
       // recvfrom(s, response, BUFSZ - 1, 0, NULL, NULL);

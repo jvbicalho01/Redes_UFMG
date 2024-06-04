@@ -43,12 +43,14 @@ char* frases_clubeDaLuta[] = {
 
 unsigned clients_connecteds = 0;
 
+// estrutura que vai guardar os dados do cliente
 typedef struct {
   char client_option[BUFSZ];
   int s_socket;
   struct sockaddr_storage storage;
 } client_info;
 
+// função responsável por realizar a lógica do programa com um cliente
 void* client_handler(void* ptr) {
   client_info* data = (client_info*)ptr;
   char response[BUFSZ];
@@ -56,10 +58,12 @@ void* client_handler(void* ptr) {
   struct sockaddr* caddr = (struct sockaddr*)&(data->storage);
   socklen_t caddrlen = sizeof(data->storage);
 
+  // qual a opção escolhida pelo cliente e envias as respectivas frases
   if (strncmp(data->client_option, "1", 1) == 0) {
     for (int i = 0; i < 5; i++) {
       memset(response, 0, BUFSZ);
       strcpy(response, frases_senhorDosAneis[i]);
+      // envia a mensagem para o cliente
       sendto(data->s_socket, response, BUFSZ - 1, 0, caddr, caddrlen);
       sleep(3);
     }
@@ -68,6 +72,7 @@ void* client_handler(void* ptr) {
     for (int i = 0; i < 5; i++) {
       memset(response, 0, BUFSZ);
       strcpy(response, frases_poderosoChefao[i]);
+      // envia a mensagem para o cliente
       sendto(data->s_socket, response, BUFSZ - 1, 0, caddr, caddrlen);
       sleep(3);
     }
@@ -76,6 +81,7 @@ void* client_handler(void* ptr) {
     for (int i = 0; i < 5; i++) {
       memset(response, 0, BUFSZ);
       strcpy(response, frases_clubeDaLuta[i]);
+      // envia a mensagem para o cliente
       sendto(data->s_socket, response, BUFSZ - 1, 0, caddr, caddrlen);
       sleep(3);
     }
@@ -89,6 +95,7 @@ void* client_handler(void* ptr) {
   pthread_exit(EXIT_SUCCESS);
 }
 
+// função responsavel por contar o número de clientes conectados
 void* count_number_connections(void* ptr) {
   while (1) {
     printf("Clientes: %u\n", clients_connecteds);
@@ -129,6 +136,7 @@ int main(int argc, char** argv) {
     logexit("bind");
   }
 
+  // cria a thread responsável por executar a função 'count_number_connections'
   pthread_t counter_clients;
   pthread_create(&counter_clients, NULL, count_number_connections, NULL);
 
@@ -154,15 +162,17 @@ int main(int argc, char** argv) {
       logexit("malloc");
     }
 
-    // cdata->client_option = client_option;
+    // inicializa a estrutura com os dados referentes do cliente para passar
+    // como parametro da função 'client_handler'
     strcpy(cdata->client_option, client_option);
+    // cdata->client_option = client_option;
     cdata->s_socket = s;
     memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
 
+    // cria a thread responsável por executar a função 'client_handler'
     pthread_t tid;
     pthread_create(&tid, NULL, client_handler, cdata);
     clients_connecteds++;
-
   }
 
   pthread_join(counter_clients, NULL);
